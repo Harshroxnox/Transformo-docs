@@ -1,0 +1,113 @@
+{
+  "builder_name": "json",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "open_hermes-2.5",
+  "dataset_size": 1683920876,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/teknium/OpenHermes-2.5@b82037821055c377bed0d495e72e46de3bc72e84/openhermes2_5.json": {
+      "num_bytes": 1936276651,
+      "checksum": null
+    }
+  },
+  "download_size": 1936276651,
+  "features": {
+    "custom_instruction": {
+      "dtype": "bool",
+      "_type": "Value"
+    },
+    "topic": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "model_name": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "model": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "skip_prompt_formatting": {
+      "dtype": "bool",
+      "_type": "Value"
+    },
+    "category": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "conversations": [
+      {
+        "from": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "value": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "weight": {
+          "dtype": "float64",
+          "_type": "Value"
+        }
+      }
+    ],
+    "views": {
+      "dtype": "int64",
+      "_type": "Value"
+    },
+    "language": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "title": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "idx": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "hash": {
+      "feature": {
+        "dtype": "int64",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "avatarUrl": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "system_prompt": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "source": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 3620197527,
+  "splits": {
+    "train": {
+      "name": "train",
+      "num_bytes": 1683920876,
+      "num_examples": 1001551,
+      "dataset_name": "open_hermes-2.5"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}
