@@ -1,22 +1,6 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from datasets import load_from_disk
+from transformers import AutoTokenizer
+from datasets import load_from_disk, load_dataset
 import json
-
-# model = AutoModelForCausalLM.from_pretrained("mistralai/Mistral-7B-Instruct-v0.3", device_map="auto")
-tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.3")
-
-# we are going to be dividing this dataset into 3 different parts and training on cloud for production
-# run the below code for only the first time
-"""
-# saving a small sample of the dataset for development and preprocessing
-ds = load_dataset("teknium/OpenHermes-2.5", split='train[:1%]')
-ds.save_to_disk("dev-dataset")
-"""
-
-ds = load_from_disk("dev-dataset")
-ds = ds["conversations"]
-print("\n\nBefore preprocessing:-")
-print(ds[0])
 
 """
     Open-Hermes dataset format 
@@ -40,6 +24,46 @@ print(ds[0])
     },
 """
 
+# can be either "dev"(for development) or "prod"(for production)
+env = "dev"
+tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.3")
+
+# run the below code for only the first time
+# saving a small sample of the dataset for development and preprocessing
+if env == "dev":
+    ds = load_dataset("teknium/OpenHermes-2.5", split='train[:1%]')
+    ds.save_to_disk("dev-dataset")
+elif env == "prod":
+    ds = load_dataset("teknium/OpenHermes-2.5")
+
+    # Load the test, train and validation splits
+    ds_test = ds['test']
+    ds_val = ds['validation']
+    ds_train = ds['train']
+
+    # Shuffle first
+    # Further split the train dataset into 3 parts
+    total_len = len(ds_train)
+    split_1 = total_len/3
+    split_2 = (2*total_len)/3
+    ds_train_1 = ds_train[:split_1]
+    ds_train_2 = ds_train[split_1:split_2]
+    ds_train_3 = ds_train[split_2:]
+
+    # Exporting all the datasets for further use
+    ds_train_1.save_to_disk("ds_train_1")
+    ds_train_2.save_to_disk("ds_train_2")
+    ds_train_3.save_to_disk("ds_train_3")
+    ds_test.save_to_disk("ds_test")
+    ds_val.save_to_disk("ds_val")
+
+
+datasets_list = []
+if env == "dev":
+    datasets_list = ["dev-dataset"]
+elif env == "prod":
+    datasets_list = ["ds_train_1", "ds_train_1", "ds_train_1", "ds_test", "ds_val"]
+
 
 def preprocess_conversation(conversation):
     for msg in conversation:
@@ -52,17 +76,28 @@ def preprocess_conversation(conversation):
             msg["role"] = "assistant"
 
 
-for conv in ds:
-    preprocess_conversation(conv)
-print("\n\nAfter preprocessing:-")
-print(ds[0])
+def load_process_export_ds(ds_name):
+    pre_ds = load_from_disk(ds_name)
+    pre_ds = pre_ds["conversations"]
 
-single_example = tokenizer.apply_chat_template(ds[0], tokenize=False)
-print("\n\nChat Template Applied to new dataset:")
-print(single_example)
+    print("\n\nBefore preprocessing:-")
+    print(pre_ds[0])
 
-# Exporting the dataset. Run this code only once
-"""
-with open("processed-dev-ds.json", "w") as json_file:
-    json.dump(ds, json_file, indent=4)
-"""
+    for conv in pre_ds:
+        preprocess_conversation(conv)
+
+    print("\n\nAfter preprocessing:-")
+    print(pre_ds[0])
+
+    single_example = tokenizer.apply_chat_template(pre_ds[0], tokenize=False)
+    print("\n\nChat Template Applied to new dataset:")
+    print(single_example)
+
+    # Exporting the dataset
+    file_name = ds_name + ".json"
+    with open(file_name, "w") as json_file:
+        json.dump(pre_ds, json_file, indent=4)
+
+
+for name in datasets_list:
+    load_process_export_ds(name)
