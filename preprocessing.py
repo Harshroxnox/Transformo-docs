@@ -1,6 +1,5 @@
 from transformers import AutoTokenizer
-from datasets import load_from_disk, load_dataset
-import json
+from datasets import load_from_disk, load_dataset, Dataset
 
 """
     Open-Hermes dataset format 
@@ -36,12 +35,13 @@ if env == "dev":
 elif env == "prod":
     ds = load_dataset("teknium/OpenHermes-2.5")
 
+    # Shuffle first
     # Load the test, train and validation splits
     ds_test = ds['test']
     ds_val = ds['validation']
     ds_train = ds['train']
 
-    # Shuffle first
+    # Shuffle again
     # Further split the train dataset into 3 parts
     total_len = len(ds_train)
     split_1 = int(total_len/3)
@@ -93,10 +93,25 @@ def load_process_export_ds(ds_name):
     print("\n\nChat Template Applied to new dataset:")
     print(single_example)
 
-    # Exporting the dataset
-    file_name = ds_name + ".json"
-    with open(file_name, "w") as json_file:
-        json.dump(pre_ds, json_file, indent=4)
+    # Converting the list of lists to hugging face dataset
+    conversations = []
+    id = 1
+    for dialogue in pre_ds:
+        dict_to_append = {
+            "conversation_id": id,
+            "dialogue": dialogue
+        }
+        conversations.append(dict_to_append)
+        id = id + 1
+
+    export_ds = Dataset.from_dict({
+        "conversation_id": [conv["conversation_id"] for conv in conversations],
+        "dialogue": [conv["dialogue"] for conv in conversations]
+    })
+
+    # Exporting the Dataset
+    print(export_ds[0])
+    export_ds.to_json("pre_"+ds_name+".json")
 
 
 for name in datasets_list:
