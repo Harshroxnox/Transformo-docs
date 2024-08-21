@@ -44,8 +44,8 @@ elif env == "prod":
     # Shuffle first
     # Further split the train dataset into 3 parts
     total_len = len(ds_train)
-    split_1 = total_len/3
-    split_2 = (2*total_len)/3
+    split_1 = int(total_len/3)
+    split_2 = int((2*total_len)/3)
     ds_train_1 = ds_train[:split_1]
     ds_train_2 = ds_train[split_1:split_2]
     ds_train_3 = ds_train[split_2:]
@@ -62,7 +62,7 @@ datasets_list = []
 if env == "dev":
     datasets_list = ["dev-dataset"]
 elif env == "prod":
-    datasets_list = ["ds_train_1", "ds_train_1", "ds_train_1", "ds_test", "ds_val"]
+    datasets_list = ["ds_train_1", "ds_train_2", "ds_train_3", "ds_test", "ds_val"]
 
 
 def preprocess_conversation(conversation):

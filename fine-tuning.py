@@ -2,12 +2,24 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments,
 from peft import LoraConfig, TaskType, get_peft_model
 import json
 
-# Development - importing the preprocessed dataset from the json file
-with open("dev-dataset.json", 'r') as file:
-    ds = json.load(file)
+env = "dev"
+turn = 1
 
-with open("ds_val.json", 'r') as file:
-    ds_val = json.load(file)
+if env == "dev":
+    # Development - importing the preprocessed dataset from the json file
+    with open("dev-dataset.json", 'r') as file:
+        ds = json.load(file)
+    total_len = len(ds)
+    split = int(0.80*total_len)
+    ds_train = ds[:split]
+    ds_val = ds[split:]
+
+elif env == "prod":
+    ds_name = "ds_train_" + f"{turn}" + ".json"
+    with open(ds_name, 'r') as file:
+        ds_train = json.load(file)
+    with open("ds_val.json", 'r') as file:
+        ds_val = json.load(file)
 
 lora_config = LoraConfig(
     r=16,
@@ -18,16 +30,15 @@ lora_config = LoraConfig(
 )
 
 model = AutoModelForCausalLM.from_pretrained("mistralai/Mistral-7B-Instruct-v0.3", device_map="auto")
-tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.3")
-ds = tokenizer.apply_chat_template(ds)
+tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.3", return_tensors="pt")
+ds_train = tokenizer.apply_chat_template(ds_train)
 ds_val = tokenizer.apply_chat_template(ds_val)
-
 
 model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
 
 training_args = TrainingArguments(
-    output_dir="model-part1",
+    output_dir="model-part"+f"{turn}",
     learning_rate=1e-4,
     per_device_train_batch_size=32,
     per_device_eval_batch_size=32,
@@ -41,7 +52,13 @@ training_args = TrainingArguments(
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=ds,
+    train_dataset=ds_train,
     eval_dataset=ds_val,
     tokenizer=tokenizer
 )
+
+trainer.train()
+
+# merging the model with adapter conv it from AutoPeftModelForCausalLM to AutoModelForCausalLM
+model = model.merge_and_unload()
+model.save_pretrained("dev_model")
