@@ -1,3 +1,17 @@
+"""
+Converting the Open Hermes 2.5 dataset into a format that can be easily processed by the default mistral
+tokenizer.apply_chat_template function after that shuffling the dataset and storing the train, test and val
+sets separately. Then we further shuffle and divide the training set into 3 equal parts for effective training.
+Since the dataset is very large (1M samples) this step is crucial.
+
+After that we are exporting each dataset.pyarrow into a json file that can be loaded back into dataset.pyarrow
+format using Dataset.from_json() function.
+
+Size of Dataset --> 2GB(approx)
+
+Dev: The dev version of this does all the preprocessing steps with a very small sample(1%) of dataset
+NOTE: We are not tokenizing here that will be done in the fine-tuning.py file
+"""
 from transformers import AutoTokenizer
 from datasets import load_from_disk, load_dataset, Dataset
 
@@ -21,6 +35,12 @@ from datasets import load_from_disk, load_dataset, Dataset
         "source": "airoboros2.2",
         "category": "orca"
     },
+    Input Format that can be easily formatted by Mistral-7b-Instruct-v0.3
+    [
+        {"role": "user", "content": "What is your favourite condiment?"},
+        {"role": "assistant", "content": "Well, I'm quite partial to a good squeeze of fresh lemon juice. It adds just the right amount of zesty flavour to whatever I'm cooking up in the kitchen!"},
+        {"role": "user", "content": "Do you have mayonnaise recipes?"}
+    ]
 """
 
 # can be either "dev"(for development) or "prod"(for production)
@@ -58,6 +78,7 @@ elif env == "prod":
     ds_val.save_to_disk("ds_val")
 
 
+# List of datasets to load, preprocess and export this depends on the env whether dev or prod
 datasets_list = []
 if env == "dev":
     datasets_list = ["dev-dataset"]
@@ -66,6 +87,7 @@ elif env == "prod":
 
 
 def preprocess_conversation(conversation):
+    # Changing the OpenHermes-2.5 format into Mistral-7b-instruct-v0.3 input format
     for msg in conversation:
         msg["role"] = msg.pop("from")
         msg["content"] = msg.pop("value")
@@ -77,12 +99,14 @@ def preprocess_conversation(conversation):
 
 
 def load_process_export_ds(ds_name):
+    # Load the dataset
     pre_ds = load_from_disk(ds_name)
     pre_ds = pre_ds["conversations"]
 
     print("\n\nBefore preprocessing:-")
     print(pre_ds[0])
 
+    # Apply the preprocessing steps
     for conv in pre_ds:
         preprocess_conversation(conv)
 
@@ -104,6 +128,7 @@ def load_process_export_ds(ds_name):
         conversations.append(dict_to_append)
         id = id + 1
 
+    # Converting from dict to hugging face dataset format
     export_ds = Dataset.from_dict({
         "conversation_id": [conv["conversation_id"] for conv in conversations],
         "dialogue": [conv["dialogue"] for conv in conversations]

@@ -2,6 +2,6 @@ Things to look at when deploying:-
 
 flash-atten metadata generation failed (maybe bcz I don't have GPU in my personal laptop)
 installed torch CPU version only
-quantization 4 bits model(for dev) 6 bits for production (quantization can only be done in GPU)
+quantization 4 bits model(for dev) 5 bits for production (quantization can only be done in GPU)
 login using the "huggingface-cli login" and provide the token to access the mistral model
-
+login using "wandb login" as well and provide the wand-key
