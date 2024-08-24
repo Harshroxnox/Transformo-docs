@@ -1,5 +1,5 @@
 """
-This is the fine-tuning file where we train the trainable parameters on the Open-Heremes-2.5 dataset
+This is the fine-tuning file where we train the trainable parameters on the Open-Hermes-2.5 dataset
 Size of model --> 14GB(approx.)
 Here we use low rank adapter of lora-matrix rank 16
 Trainable lora parameters --> 6 Million params. (out of 7 Billion params.)

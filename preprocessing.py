@@ -51,17 +51,20 @@ tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.3")
 # saving a small sample of the dataset for development and preprocessing
 if env == "dev":
     ds = load_dataset("teknium/OpenHermes-2.5", split='train[:1%]')
+    ds = ds.shuffle(seed=42)
     ds.save_to_disk("dev-dataset")
 elif env == "prod":
     ds = load_dataset("teknium/OpenHermes-2.5")
 
     # Shuffle first
+    ds = ds.shuffle(seed=42)
     # Load the test, train and validation splits
     ds_test = ds['test']
     ds_val = ds['validation']
     ds_train = ds['train']
 
     # Shuffle again
+    ds_train = ds_train.shuffle(seed=42)
     # Further split the train dataset into 3 parts
     total_len = len(ds_train)
     split_1 = int(total_len/3)
