@@ -18,8 +18,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments,
 from transformers import DataCollatorForLanguageModeling
 from datasets import Dataset
 from peft import LoraConfig, TaskType, get_peft_model
-import torch
-
 
 # env and turn values initialized
 env = "dev"
@@ -96,9 +94,9 @@ ds_val = ds_val.map(tokenization, batched=True, remove_columns=ds_val.column_nam
 model = AutoModelForCausalLM.from_pretrained(
     "mistralai/Mistral-7B-Instruct-v0.3",
     quantization_config=quantization_config,
-    torch_dtype=torch.float16,
     device_map="auto"
 )
+
 model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
 
