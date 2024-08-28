@@ -14,9 +14,12 @@ Dev:
     No need to run this multiple times for dev obviously
     turn variable has no significance when in Dev mode
 """
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer, BitsAndBytesConfig
+from transformers import DataCollatorForLanguageModeling
 from datasets import Dataset
 from peft import LoraConfig, TaskType, get_peft_model
+import torch
+
 
 # env and turn values initialized
 env = "dev"
@@ -33,6 +36,9 @@ else:
     ds_name = "pre_ds_train_" + f"{turn}" + ".json"
     ds_train = Dataset.from_json(ds_name)
     ds_val = Dataset.from_json("pre_ds_val.json")
+
+# Define the quantization type for qlora
+quantization_config = BitsAndBytesConfig(load_in_8bit=True)
 
 # Lora configuration settings
 lora_config = LoraConfig(
@@ -52,6 +58,8 @@ tokenizer.pad_token = tokenizer.unk_token
 # Getting the EOS token and context length for model
 eos_token_id = tokenizer.eos_token_id
 context_length = 32768
+
+data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
 
 
 def tokenization(example):
@@ -85,21 +93,28 @@ ds_train = ds_train.map(tokenization, batched=True, remove_columns=ds_train.colu
 ds_val = ds_val.map(tokenization, batched=True, remove_columns=ds_val.column_names)
 
 # Download and import the model and get the adapter
-model = AutoModelForCausalLM.from_pretrained("mistralai/Mistral-7B-Instruct-v0.3", device_map="auto")
+model = AutoModelForCausalLM.from_pretrained(
+    "mistralai/Mistral-7B-Instruct-v0.3",
+    quantization_config=quantization_config,
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
 model = get_peft_model(model, lora_config)
 model.print_trainable_parameters()
 
 # Defining training arguments
 training_args = TrainingArguments(
     output_dir="model-part"+f"{turn}",
+    evaluation_strategy="steps",
+    eval_steps=5_000,
+    logging_steps=5_000,
+    gradient_accumulation_steps=8,
     learning_rate=1e-4,
-    per_device_train_batch_size=32,
-    per_device_eval_batch_size=32,
+    per_device_train_batch_size=1,
+    per_device_eval_batch_size=1,
     num_train_epochs=1,
     weight_decay=0.01,
-    evaluation_strategy="epoch",
-    save_strategy="epoch",
-    load_best_model_at_end=True,
+    save_strategy="epoch"
 )
 
 trainer = Trainer(
@@ -107,13 +122,12 @@ trainer = Trainer(
     args=training_args,
     train_dataset=ds_train,
     eval_dataset=ds_val,
+    data_collator=data_collator,
     tokenizer=tokenizer
 )
 
 # Start training
 trainer.train()
 
-# merging the model with adapter conv it from AutoPeftModelForCausalLM to AutoModelForCausalLM
-model = model.merge_and_unload()
-# Save the model
+# Save the adapter
 model.save_pretrained("dev_model")
