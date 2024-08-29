@@ -2,12 +2,14 @@
 This is the fine-tuning file where we train the trainable parameters on the Open-Hermes-2.5 dataset
 Size of model --> 14GB(approx.)
 Here we use low rank adapter of lora-matrix rank 16
-Trainable lora parameters --> 6 Million params. (out of 7 Billion params.)
+Trainable lora parameters --> 6.8 Million params. (out of 7 Billion params.)
 NOTE:
-    For production this script needs to be run 3 times by incrementing the value of turn each time
-    for turn = 1
-        turn = 2
-    and turn = 3
+    For production this script needs to be run 5 times by incrementing the value of turn each time
+    for turn = 1 (10 hrs)
+        turn = 2 (10 hrs)
+        .
+        .
+        turn = 5
     After that the final model export can be quantized using llama-cpp
 Dev:
     For dev we are just using a small sample dataset for checking if everything is working properly.
@@ -18,6 +20,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments,
 from transformers import DataCollatorForLanguageModeling
 from datasets import Dataset
 from peft import LoraConfig, TaskType, get_peft_model
+import torch
 
 # env and turn values initialized
 env = "dev"
@@ -30,13 +33,20 @@ if env == "dev":
     split_ds = ds.train_test_split(test_size=0.2)
     ds_train = split_ds["train"]
     ds_val = split_ds["test"]
+    ds_train = ds_train.select(range(10))
+    ds_val = ds_val.select(range(2))
 else:
     ds_name = "pre_ds_train_" + f"{turn}" + ".json"
     ds_train = Dataset.from_json(ds_name)
     ds_val = Dataset.from_json("pre_ds_val.json")
 
-# Define the quantization type for qlora
-quantization_config = BitsAndBytesConfig(load_in_8bit=True)
+# Define the quantization type for qlora. The lora weights will be quantized to 4 bits
+quantization_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type='nf4',
+    bnb_4bit_compute_dtype=torch.float16,
+    bnb_4bit_use_double_quant=False
+)
 
 # Lora configuration settings
 lora_config = LoraConfig(
@@ -55,7 +65,7 @@ tokenizer.pad_token = tokenizer.unk_token
 
 # Getting the EOS token and context length for model
 eos_token_id = tokenizer.eos_token_id
-context_length = 32768
+context_length = 64
 
 data_collator = DataCollatorForLanguageModeling(tokenizer, mlm=False)
 
@@ -94,6 +104,7 @@ ds_val = ds_val.map(tokenization, batched=True, remove_columns=ds_val.column_nam
 model = AutoModelForCausalLM.from_pretrained(
     "mistralai/Mistral-7B-Instruct-v0.3",
     quantization_config=quantization_config,
+    trust_remote_code=True,
     device_map="auto"
 )
 
@@ -108,8 +119,8 @@ training_args = TrainingArguments(
     logging_steps=5_000,
     gradient_accumulation_steps=8,
     learning_rate=1e-4,
-    per_device_train_batch_size=1,
-    per_device_eval_batch_size=1,
+    per_device_train_batch_size=16,
+    per_device_eval_batch_size=16,
     num_train_epochs=1,
     weight_decay=0.01,
     save_strategy="epoch"
@@ -128,4 +139,4 @@ trainer = Trainer(
 trainer.train()
 
 # Save the adapter
-model.save_pretrained("dev_model")
+model.save_pretrained("dev-lora")
