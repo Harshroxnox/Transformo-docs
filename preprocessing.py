@@ -1,7 +1,7 @@
 """
 Converting the Open Hermes 2.5 dataset into a format that can be easily processed by the default mistral
-tokenizer.apply_chat_template function after that shuffling the dataset and storing the train, test and val
-sets separately. Then we further shuffle and divide the training set into 3 equal parts for effective training.
+tokenizer.apply_chat_template function after that shuffling the dataset and storing the train and test
+sets separately. Then we further shuffle and divide the training set into 5 equal parts for effective training.
 Since the dataset is very large (1M samples) this step is crucial.
 
 After that we are exporting each dataset.pyarrow into a json file that can be loaded back into dataset.pyarrow
@@ -14,6 +14,7 @@ NOTE: We are not tokenizing here that will be done in the fine-tuning.py file
 """
 from transformers import AutoTokenizer
 from datasets import load_from_disk, load_dataset, Dataset
+
 
 """
     Open-Hermes dataset format 
@@ -44,7 +45,7 @@ from datasets import load_from_disk, load_dataset, Dataset
 """
 
 # can be either "dev"(for development) or "prod"(for production)
-env = "dev"
+env = "prod"
 tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.3")
 
 # run the below code for only the first time
@@ -54,30 +55,30 @@ if env == "dev":
     ds = ds.shuffle(seed=42)
     ds.save_to_disk("dev-dataset")
 elif env == "prod":
-    ds = load_dataset("teknium/OpenHermes-2.5")
+    ds = load_dataset("teknium/OpenHermes-2.5", split="train[:13%]")
+    ds = ds.select(range(125000))
 
-    # Shuffle first
-    ds = ds.shuffle(seed=42)
-    # Load the test, train and validation splits
-    ds_test = ds['test']
-    ds_val = ds['validation']
-    ds_train = ds['train']
+    # performing train, test split
+    ds = ds.train_test_split(test_size=0.05)
+    ds_val = ds["test"]
+    ds_train = ds["train"]
 
-    # Shuffle again
+    # shuffle first
     ds_train = ds_train.shuffle(seed=42)
-    # Further split the train dataset into 3 parts
-    total_len = len(ds_train)
-    split_1 = int(total_len/3)
-    split_2 = int((2*total_len)/3)
-    ds_train_1 = ds_train[:split_1]
-    ds_train_2 = ds_train[split_1:split_2]
-    ds_train_3 = ds_train[split_2:]
 
-    # Exporting all the datasets for further use
+    # Divide the ds_train into 5 equal parts
+    ds_train_1 = ds_train.select(range(23750))
+    ds_train_2 = ds_train.select(range(23750, 47500))
+    ds_train_3 = ds_train.select(range(47500, 71250))
+    ds_train_4 = ds_train.select(range(71250, 95000))
+    ds_train_5 = ds_train.select(range(95000, 118750))
+
+    # Export all the datasets
     ds_train_1.save_to_disk("ds_train_1")
     ds_train_2.save_to_disk("ds_train_2")
     ds_train_3.save_to_disk("ds_train_3")
-    ds_test.save_to_disk("ds_test")
+    ds_train_4.save_to_disk("ds_train_4")
+    ds_train_5.save_to_disk("ds_train_5")
     ds_val.save_to_disk("ds_val")
 
 
@@ -86,7 +87,7 @@ datasets_list = []
 if env == "dev":
     datasets_list = ["dev-dataset"]
 elif env == "prod":
-    datasets_list = ["ds_train_1", "ds_train_2", "ds_train_3", "ds_test", "ds_val"]
+    datasets_list = ["ds_train_1", "ds_train_2", "ds_train_3", "ds_train_4", "ds_train_5", "ds_val"]
 
 
 def preprocess_conversation(conversation):
@@ -144,3 +145,4 @@ def load_process_export_ds(ds_name):
 
 for name in datasets_list:
     load_process_export_ds(name)
+
