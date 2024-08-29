@@ -15,7 +15,6 @@ NOTE: We are not tokenizing here that will be done in the fine-tuning.py file
 from transformers import AutoTokenizer
 from datasets import load_from_disk, load_dataset, Dataset
 
-
 """
     Open-Hermes dataset format 
     {
@@ -55,7 +54,12 @@ if env == "dev":
     ds = ds.shuffle(seed=42)
     ds.save_to_disk("dev-dataset")
 elif env == "prod":
-    ds = load_dataset("teknium/OpenHermes-2.5", split="train[:13%]")
+    ds = load_dataset("teknium/OpenHermes-2.5")
+
+    # full dataset shuffle
+    ds = ds.shuffle(seed=42)
+    # load 125,000 samples of training dataset
+    ds = ds["train"]
     ds = ds.select(range(125000))
 
     # performing train, test split
@@ -145,4 +149,3 @@ def load_process_export_ds(ds_name):
 
 for name in datasets_list:
     load_process_export_ds(name)
-

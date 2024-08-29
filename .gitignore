@@ -2,3 +2,15 @@ venv
 .env
 q4_model/
 .idea/
+ds_train_1
+ds_train_2
+ds_train_3
+ds_train_4
+ds_train_5
+ds_val
+pre_ds_train_1.json
+pre_ds_train_2.json
+pre_ds_train_3.json
+pre_ds_train_4.json
+pre_ds_train_5.json
+pre_ds_val.json
