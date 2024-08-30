@@ -44,7 +44,7 @@ from datasets import load_from_disk, load_dataset, Dataset
 """
 
 # can be either "dev"(for development) or "prod"(for production)
-env = "prod"
+env = "dev"
 tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.3")
 
 # run the below code for only the first time
@@ -58,6 +58,7 @@ elif env == "prod":
 
     # full dataset shuffle
     ds = ds.shuffle(seed=42)
+
     # load 125,000 samples of training dataset
     ds = ds["train"]
     ds = ds.select(range(125000))

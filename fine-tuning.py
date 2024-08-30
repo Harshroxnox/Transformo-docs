@@ -19,7 +19,7 @@ Dev:
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer, BitsAndBytesConfig
 from transformers import DataCollatorForLanguageModeling
 from datasets import Dataset
-from peft import LoraConfig, TaskType, get_peft_model
+from peft import LoraConfig, TaskType, get_peft_model, PeftModel
 import torch
 
 # env and turn values initialized
@@ -108,7 +108,11 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map="auto"
 )
 
-model = get_peft_model(model, lora_config)
+if turn == 1 or env == "dev":
+    model = get_peft_model(model, lora_config)
+else:
+    model = PeftModel.from_pretrained(model, "/lora_adapter_path", is_trainable=True)
+
 model.print_trainable_parameters()
 
 # Defining training arguments
@@ -116,7 +120,7 @@ training_args = TrainingArguments(
     output_dir="model-part"+f"{turn}",
     evaluation_strategy="steps",
     eval_steps=5_000,
-    logging_steps=5_000,
+    logging_steps=1_000,
     gradient_accumulation_steps=8,
     learning_rate=1e-4,
     per_device_train_batch_size=16,
