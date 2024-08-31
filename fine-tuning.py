@@ -37,7 +37,7 @@ if env == "dev":
     ds_val = ds_val.select(range(2))
 else:
     ds_name = "pre_ds_train_" + f"{turn}" + ".json"
-    ds_train = Dataset.from_json(ds_name)
+    ds_train = Dataset.from_json(f"pre_ds_train_{turn}.json")
     ds_val = Dataset.from_json("pre_ds_val.json")
 
 # Define the quantization type for qlora. The lora weights will be quantized to 4 bits
@@ -142,5 +142,11 @@ trainer = Trainer(
 # Start training
 trainer.train()
 
+adapter_name = str
+if env == "dev":
+    adapter_name = "dev-lora"
+else:
+    adapter_name = f"prod-lora-t{turn}"
+
 # Save the adapter
-model.save_pretrained("dev-lora")
+model.save_pretrained(adapter_name)
