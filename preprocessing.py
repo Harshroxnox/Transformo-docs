@@ -44,7 +44,7 @@ from datasets import load_from_disk, load_dataset, Dataset
 """
 
 # can be either "dev"(for development) or "prod"(for production)
-env = "dev"
+env = "prod"
 tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.3")
 
 # run the below code for only the first time
@@ -59,24 +59,26 @@ elif env == "prod":
     # full dataset shuffle
     ds = ds.shuffle(seed=42)
 
-    # load 125,000 samples of training dataset
+    # load 115,000 samples of training dataset
     ds = ds["train"]
-    ds = ds.select(range(125000))
+    ds = ds.select(range(115000))
 
     # performing train, test split
     ds = ds.train_test_split(test_size=0.05)
     ds_val = ds["test"]
+    ds_val = ds_val.select(range(3150))
     ds_train = ds["train"]
 
     # shuffle first
     ds_train = ds_train.shuffle(seed=42)
 
     # Divide the ds_train into 5 equal parts
-    ds_train_1 = ds_train.select(range(23750))
-    ds_train_2 = ds_train.select(range(23750, 47500))
-    ds_train_3 = ds_train.select(range(47500, 71250))
-    ds_train_4 = ds_train.select(range(71250, 95000))
-    ds_train_5 = ds_train.select(range(95000, 118750))
+    ds_train_1 = ds_train.select(range(21850))
+    ds_train_2 = ds_train.select(range(21850, 43700))
+    ds_train_3 = ds_train.select(range(43700, 65550))
+    ds_train_4 = ds_train.select(range(65550, 87400))
+    ds_train_5 = ds_train.select(range(87400, 109250))
+
 
     # Export all the datasets
     ds_train_1.save_to_disk("ds_train_1")
