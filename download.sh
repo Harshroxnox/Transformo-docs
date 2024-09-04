@@ -1,5 +1,6 @@
 #!/bin/bash
 
+cd rag
 mkdir model
 cd model
 
