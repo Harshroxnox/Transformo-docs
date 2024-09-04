@@ -23,6 +23,8 @@ from peft import LoraConfig, TaskType, get_peft_model, PeftModel
 import torch
 
 # env and turn values initialized
+# you have to edit these values according to what you are trying to accomplish
+# set env = "dev" for development or env = "prod" for production
 env = "dev"
 turn = 1
 
@@ -111,6 +113,7 @@ model = AutoModelForCausalLM.from_pretrained(
 if turn == 1 or env == "dev":
     model = get_peft_model(model, lora_config)
 else:
+    # Edit the lora_adapter_path and point it to your lora_adapter location
     model = PeftModel.from_pretrained(model, "/lora_adapter_path", is_trainable=True)
 
 model.print_trainable_parameters()
