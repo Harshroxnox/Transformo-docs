@@ -12,11 +12,11 @@ documents = reader.load_data()
 print(documents)
 
 llm = LlamaCPP(
-    # optionally, you can set the path to a pre-downloaded model instead of model_url
+    # you can set the path to a pre-downloaded model instead of model_url
     model_path="./model/Mistral-7B-dev-Q5_K_M.gguf",
     temperature=0.1,
     max_new_tokens=256,
-    # llama2 has a context window of 4096 tokens, but we set it lower to allow for some wiggle room
+    # we will change this context window later according to mistral-instruct
     context_window=3900,
     # transform inputs into Llama2 format
     messages_to_prompt=messages_to_prompt,
@@ -32,6 +32,7 @@ set_global_tokenizer(
     AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.3").encode
 )
 
+# import your embeddings model
 embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
 # create vector store index
@@ -40,5 +41,5 @@ index = VectorStoreIndex.from_documents(documents, embed_model=embed_model)
 # set up query engine
 query_engine = index.as_query_engine(llm=llm)
 
-response = query_engine.query("What did the author do growing up?")
+response = query_engine.query("Can you explain model architecture of mistral?")
 print(response)
