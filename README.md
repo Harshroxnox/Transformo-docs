@@ -7,7 +7,7 @@ apt update
 apt upgrade
 ```
 ```
-apt install python3-virtualenv
+apt install python3.10-virtualenv
 ```
 ```
 apt install cmake build-essential python3-dev
