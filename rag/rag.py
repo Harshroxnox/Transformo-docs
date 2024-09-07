@@ -7,8 +7,7 @@ from llama_index.llms.llama_cpp.llama_utils import (
     completion_to_prompt,
 )
 
-reader = SimpleDirectoryReader(input_dir="pdf/")
-documents = reader.load_data()
+documents = SimpleDirectoryReader(input_dir="pdf/").load_data()
 print(documents)
 
 llm = LlamaCPP(
@@ -41,5 +40,5 @@ index = VectorStoreIndex.from_documents(documents, embed_model=embed_model)
 # set up query engine
 query_engine = index.as_query_engine(llm=llm)
 
-response = query_engine.query("Can you explain model architecture of mistral?")
+response = query_engine.query("What this document is all about?")
 print(response)
