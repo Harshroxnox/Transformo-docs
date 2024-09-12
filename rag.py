@@ -24,8 +24,10 @@ text_splitter = RecursiveCharacterTextSplitter(
 
 documents = text_splitter.create_documents([text])
 
+print("no of documents: ")
 print(len(documents))
 
+print("single document: ")
 print(documents[0])
 
 embedding_model = llama_cpp.Llama(
@@ -48,9 +50,11 @@ all_text = [item.page_content for item in documents]
 char_per_sec = len(''.join(all_text))/ (end-start)
 print(f"TIME: {end-start:.2f} seconds / {char_per_sec:,.2f} chars/second")
 
+print("\n")
+print("single doc embedding: ")
 print(document_embeddings[0])
 
-client = QdrantClient(path="embeddings")
+client = QdrantClient(host="localhost", port=6333)
 
 # If collection VectorDB exists then delete
 if client.collection_exists(collection_name="VectorDB"):
@@ -77,6 +81,9 @@ operation_info = client.upsert(
     wait=True,
     points=points
 )
+
+print("\n")
+print("operation_info: ")
 print(operation_info)
 
 search_query = "What is this document all about?"
@@ -87,4 +94,32 @@ search_result = client.search(
     limit=3
 )
 
+print("\n")
+print("search_result: ")
 print(search_result)
+
+llm = llama_cpp.Llama(
+    model_path="./models/Main-Model-7.2B-Q5_K_M.gguf",
+    verbose=False
+)
+
+template = """
+You are a helpful assistant who answers questions using the provided context. If you don't know the answer, 
+simply state that you don't know.
+
+{context}
+
+Question: {question}"""
+
+stream = llm.create_chat_completion(
+    messages=[
+        {"role": "user", "content": template.format(
+            context="\n\n".join([row.payload['text'] for row in search_result]),
+            question=search_query
+        )}
+    ],
+    stream=True
+)
+
+for chunk in stream:
+    print(chunk['choices'][0]['delta'].get('content', ''), end='')
