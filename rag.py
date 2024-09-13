@@ -3,7 +3,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from qdrant_client import QdrantClient
 import llama_cpp
 import pymupdf
-import time
 import uuid
 
 client = QdrantClient(host="localhost", port=6333)
@@ -46,7 +45,6 @@ def pdf_to_documents(doc):
 
 
 def generate_doc_embeddings(_documents):
-    start = time.time()
     local_document_embeddings = []
     # Generate Embeddings for every single document in documents and append it into document_embeddings
     for document in _documents:
@@ -55,10 +53,6 @@ def generate_doc_embeddings(_documents):
             (document, embeddings["data"][0]["embedding"])
         ])
 
-    end = time.time()
-    all_text = [item.page_content for item in _documents]
-    char_per_sec = len(''.join(all_text)) / (end-start)
-    print(f"TIME: {end-start:.2f} seconds / {char_per_sec:,.2f} chars/second")
     return local_document_embeddings
 
 
@@ -117,4 +111,5 @@ def query(_search_query):
     )
 
     for chunk in stream:
-        print(chunk['choices'][0]['delta'].get('content', ''), end='')
+        ans = chunk['choices'][0]['delta'].get('content', '')
+        yield ans
