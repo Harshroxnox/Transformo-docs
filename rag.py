@@ -1,9 +1,12 @@
 from qdrant_client.models import Distance, VectorParams, PointStruct
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from flask import Flask, request, jsonify
 from qdrant_client import QdrantClient
-import llama_cpp
 import pymupdf
+import llama_cpp
 import uuid
+
+app = Flask(__name__)
 
 client = QdrantClient(host="localhost", port=6333)
 
@@ -34,12 +37,13 @@ simply state that you don't know.
 Question: {question}"""
 
 
-def pdf_to_documents(doc):
+def pdf_to_documents(arr_docs):
     text = ""
-    # Extract all the text from the pdf document
-    for page in doc:
-        result = page.get_text()
-        text += result
+    for doc in arr_docs:
+        # Extract all the text from the pdf document
+        for page in doc:
+            result = page.get_text()
+            text += result
 
     return text_splitter.create_documents([text])
 
@@ -100,16 +104,41 @@ def query(_search_query):
     print("search_result: ")
     print(search_result)
 
-    stream = llm.create_chat_completion(
+    ans = llm.create_chat_completion(
         messages=[
             {"role": "user", "content": template.format(
                 context="\n\n".join([row.payload['text'] for row in search_result]),
                 question=_search_query
             )}
-        ],
-        stream=True
+        ]
     )
+    ans = ans['choices'][0]['message']['content']
+    print(ans)
+    return ans
+    # for chunk in stream:
+    #     ans = chunk['choices'][0]['delta'].get('content', '')
+    #     yield ans
 
-    for chunk in stream:
-        ans = chunk['choices'][0]['delta'].get('content', '')
-        yield ans
+
+def insert_pdf_vectordb(_arr_docs):
+    documents = pdf_to_documents(_arr_docs)
+
+    document_embeddings = generate_doc_embeddings(documents)
+
+    insert_in_db(document_embeddings)
+
+
+pdf_file = pymupdf.open("./pdf/2310.06825v1.pdf")
+insert_pdf_vectordb([pdf_file])
+
+
+@app.route('/question', methods=['POST'])
+def question():
+    data = request.get_json()
+    search_query = data.get("question")
+    ans = query(search_query)
+    return jsonify({"answer": ans})
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
