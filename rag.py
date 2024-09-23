@@ -6,7 +6,7 @@ import pymupdf
 import llama_cpp
 import uuid
 
-app = Flask(__name__)
+# app = Flask(__name__)
 
 client = QdrantClient(host="localhost", port=6333)
 
@@ -18,14 +18,19 @@ text_splitter = RecursiveCharacterTextSplitter(
 )
 
 embedding_model = llama_cpp.Llama(
-    model_path="./models/bge-small-en-v1.5-f16.gguf",
+    model_path="./models/mxbai-embed-large-v1-f16.gguf",
     embedding=True,
-    verbose=False
+    verbose=False,
 )
 
 llm = llama_cpp.Llama(
-    model_path="./models/Main-Model-7.2B-Q5_K_M.gguf",
-    verbose=False
+    model_path="./models/Phi-3.5-mini-instruct-Q5_K_M.gguf",
+    n_ctx=512,
+    n_threads=4,
+    n_threads_batch=4,
+    use_mlock=False,
+    use_mmap=True,
+    verbose=True,
 )
 
 template = """
@@ -67,7 +72,7 @@ def insert_in_db(_document_embeddings):
 
     client.create_collection(
         collection_name="VectorDB",
-        vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+        vectors_config=VectorParams(size=1024, distance=Distance.COSINE),
     )
 
     points = [
@@ -97,7 +102,7 @@ def query(_search_query):
     search_result = client.search(
         collection_name="VectorDB",
         query_vector=query_vector,
-        limit=3
+        limit=5
     )
 
     print("\n")
@@ -110,13 +115,15 @@ def query(_search_query):
                 context="\n\n".join([row.payload['text'] for row in search_result]),
                 question=_search_query
             )}
-        ]
+        ],
+        # stream=True
     )
     ans = ans['choices'][0]['message']['content']
     print(ans)
     return ans
     # for chunk in stream:
     #     ans = chunk['choices'][0]['delta'].get('content', '')
+    #     print(ans, end='')
     #     yield ans
 
 
@@ -128,17 +135,17 @@ def insert_pdf_vectordb(_arr_docs):
     insert_in_db(document_embeddings)
 
 
-pdf_file = pymupdf.open("./pdf/2310.06825v1.pdf")
+pdf_file = pymupdf.open("./pdf/Cross-Validators-Idea.pdf")
 insert_pdf_vectordb([pdf_file])
+query("what is the main idea?")
 
-
-@app.route('/question', methods=['POST'])
-def question():
-    data = request.get_json()
-    search_query = data.get("question")
-    ans = query(search_query)
-    return jsonify({"answer": ans})
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
+# @app.route('/question', methods=['POST'])
+# def question():
+#     data = request.get_json()
+#     search_query = data.get("question")
+#     ans = query(search_query)
+#     return jsonify({"answer": ans})
+#
+#
+# if __name__ == "__main__":
+#     app.run(debug=True)
