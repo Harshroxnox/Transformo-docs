@@ -15,3 +15,8 @@ pre_ds_train_4.json
 pre_ds_train_5.json
 pre_ds_val.json
 model/
+flask-rag/venv/
+flask-rag/models/
+flask-rag/__pycache__
+flask-rag/.idea
+flask-rag/qdrant_storage/
