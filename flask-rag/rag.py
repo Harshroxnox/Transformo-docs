@@ -5,10 +5,21 @@ from qdrant_client import QdrantClient
 import pymupdf
 import llama_cpp
 import uuid
+from openai import OpenAI
 
 # app = Flask(__name__)
 
-client = QdrantClient(host="localhost", port=6333)
+template = """
+You are a helpful assistant who answers questions using the provided context. If you don't know the answer, 
+simply state that you don't know.
+
+{context}
+
+Question: {question}"""
+
+qdrant_client = QdrantClient(host="localhost", port=6333)
+
+llm_client = OpenAI(base_url="http://localhost:8080/v1", api_key="abcd")
 
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=300,
@@ -22,24 +33,6 @@ embedding_model = llama_cpp.Llama(
     embedding=True,
     verbose=False,
 )
-
-llm = llama_cpp.Llama(
-    model_path="./models/Phi-3.5-mini-instruct-Q5_K_M.gguf",
-    n_ctx=512,
-    n_threads=4,
-    n_threads_batch=4,
-    use_mlock=False,
-    use_mmap=True,
-    verbose=True,
-)
-
-template = """
-You are a helpful assistant who answers questions using the provided context. If you don't know the answer, 
-simply state that you don't know.
-
-{context}
-
-Question: {question}"""
 
 
 def pdf_to_documents(arr_docs):
@@ -67,10 +60,10 @@ def generate_doc_embeddings(_documents):
 
 def insert_in_db(_document_embeddings):
     # If collection VectorDB exists then delete
-    if client.collection_exists(collection_name="VectorDB"):
-        client.delete_collection(collection_name="VectorDB")
+    if qdrant_client.collection_exists(collection_name="VectorDB"):
+        qdrant_client.delete_collection(collection_name="VectorDB")
 
-    client.create_collection(
+    qdrant_client.create_collection(
         collection_name="VectorDB",
         vectors_config=VectorParams(size=1024, distance=Distance.COSINE),
     )
@@ -86,7 +79,7 @@ def insert_in_db(_document_embeddings):
         for document, embeddings in _document_embeddings
     ]
 
-    operation_info = client.upsert(
+    operation_info = qdrant_client.upsert(
         collection_name="VectorDB",
         wait=True,
         points=points
@@ -97,34 +90,39 @@ def insert_in_db(_document_embeddings):
     print(operation_info)
 
 
-def query(_search_query):
+def vector_search(_search_query):
     query_vector = embedding_model.create_embedding(_search_query)['data'][0]['embedding']
-    search_result = client.search(
+    search_result = qdrant_client.search(
         collection_name="VectorDB",
         query_vector=query_vector,
-        limit=5
+        limit=3
     )
 
     print("\n")
     print("search_result: ")
     print(search_result)
 
-    ans = llm.create_chat_completion(
-        messages=[
-            {"role": "user", "content": template.format(
-                context="\n\n".join([row.payload['text'] for row in search_result]),
-                question=_search_query
-            )}
-        ],
-        # stream=True
+    _messages = [
+        {"role": "user", "content": template.format(
+            context="".join([row.payload['text'] for row in search_result]),
+            question=_search_query
+        )}
+    ]
+
+    print(_messages[0]["content"])
+    return _messages
+
+
+def query(_messages):
+    response = llm_client.chat.completions.create(
+        model="Phi-3.5-Instruct",
+        messages=_messages,
+        stream=True
     )
-    ans = ans['choices'][0]['message']['content']
-    print(ans)
-    return ans
-    # for chunk in stream:
-    #     ans = chunk['choices'][0]['delta'].get('content', '')
-    #     print(ans, end='')
-    #     yield ans
+
+    for chunk in response:
+        print(chunk.choices[0].delta.content, end='')
+    # print(response.choices[0].message)
 
 
 def insert_pdf_vectordb(_arr_docs):
@@ -137,7 +135,8 @@ def insert_pdf_vectordb(_arr_docs):
 
 pdf_file = pymupdf.open("./pdf/Cross-Validators-Idea.pdf")
 insert_pdf_vectordb([pdf_file])
-query("what is the main idea?")
+messages = vector_search("what is the main idea?")
+query(messages)
 
 # @app.route('/question', methods=['POST'])
 # def question():
@@ -149,3 +148,4 @@ query("what is the main idea?")
 #
 # if __name__ == "__main__":
 #     app.run(debug=True)
+
