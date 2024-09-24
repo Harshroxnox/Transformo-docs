@@ -20,3 +20,4 @@ flask-rag/models/
 flask-rag/__pycache__
 flask-rag/.idea
 flask-rag/qdrant_storage/
+flask-rag/venv-rag/
