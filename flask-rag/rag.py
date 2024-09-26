@@ -102,13 +102,18 @@ def vector_search(_search_query):
     print("search_result: ")
     print(search_result)
 
+    context = "".join([row.payload['text'] for row in search_result])
+    context = context.replace('\n', ' ')
+
     _messages = [
         {"role": "user", "content": template.format(
-            context="".join([row.payload['text'] for row in search_result]),
+            context=context,
             question=_search_query
         )}
     ]
 
+    print("\n")
+    print("Prompt: ")
     print(_messages[0]["content"])
     return _messages
 
@@ -121,6 +126,8 @@ def query(_messages):
     )
 
     for chunk in response:
+        if chunk.choices[0].delta.content is None:
+            continue
         print(chunk.choices[0].delta.content, end='')
     # print(response.choices[0].message)
 
