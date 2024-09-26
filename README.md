@@ -3,8 +3,8 @@
 - For the Retrieval Augmented Generation (RAG) built using an open source quantized model go to flask-rag.
 - NOTE: For flask-rag and fine-tuning a model you need to create separate virtual environments with their 
   respective requirements.txt
-- All the preprocessing, quantization and rag scripts written do work but there is large scope for 
-  improvements such as performance for rag system and adjusting hyperparameters for fine-tuning.
+- All the preprocessing, quantization and rag scripts written work but there is scope for 
+  improvements such as adjusting hyperparameters for fine-tuning.
 
 ## Technologies Used
 - HuggingFace transformers, peft, datasets library is used for fine-tuning.
